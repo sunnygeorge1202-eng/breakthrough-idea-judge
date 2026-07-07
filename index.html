@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Breakthrough Idea Contest — Judge Scoring</title>
+<style>
+  :root{
+    --ink:#1a1a2e; --sub:#5a5a72; --line:#e3e3ec; --accent:#2f5ce0;
+    --good:#1a8f5a; --bg:#f6f7fb; --card:#ffffff;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg); color:var(--ink); padding-bottom:100px;
+  }
+  header{
+    background:var(--ink); color:#fff; padding:16px 18px 14px;
+    position:sticky; top:0; z-index:10;
+  }
+  header h1{margin:0; font-size:17px; font-weight:700;}
+  header p{margin:4px 0 0; font-size:12.5px; color:#c7c9e0;}
+  .wrap{max-width:640px; margin:0 auto; padding:14px;}
+  .card{
+    background:var(--card); border-radius:14px; padding:16px;
+    margin-bottom:14px; box-shadow:0 1px 3px rgba(0,0,0,0.06); border:1px solid var(--line);
+  }
+  label.field-label{font-size:12.5px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; color:var(--sub); display:block; margin-bottom:6px;}
+  input[type=text]{
+    width:100%; padding:11px 12px; border:1.5px solid var(--line); border-radius:9px;
+    font-size:16px; background:#fff; color:var(--ink);
+  }
+  input[type=text]:focus{outline:none; border-color:var(--accent);}
+  .crit-head{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:2px;}
+  .crit-title{font-weight:700; font-size:15px;}
+  .crit-weight{font-size:12px; color:var(--sub); font-weight:600;}
+  .crit-desc{font-size:12.5px; color:var(--sub); margin-bottom:10px; line-height:1.4;}
+  .scale{display:flex; gap:6px;}
+  .scale button{
+    flex:1; padding:10px 2px; border-radius:9px; border:1.5px solid var(--line);
+    background:#fff; font-size:15px; font-weight:700; color:var(--sub); cursor:pointer;
+  }
+  .scale button.selected{ background:var(--accent); border-color:var(--accent); color:#fff; }
+  .anchor-hint{font-size:11px; color:#8a8aa0; margin-top:6px; min-height:14px;}
+  .totalbar{
+    position:fixed; bottom:0; left:0; right:0; background:#fff; border-top:1px solid var(--line);
+    padding:12px 16px; box-shadow:0 -2px 8px rgba(0,0,0,0.08); z-index:20;
+  }
+  .totalbar .row{max-width:640px; margin:0 auto; display:flex; align-items:center; gap:12px;}
+  .totalbar .score{font-size:22px; font-weight:800; color:var(--ink);}
+  .totalbar .score span{font-size:13px; font-weight:600; color:var(--sub);}
+  .submit-btn{
+    flex:1; background:var(--good); color:#fff; border:none; border-radius:10px;
+    padding:14px; font-size:15px; font-weight:700; cursor:pointer;
+  }
+  .submit-btn:disabled{background:#b9c2c4; cursor:not-allowed;}
+  .status{font-size:12.5px; margin-top:8px; text-align:center; min-height:16px;}
+  .status.ok{color:var(--good);}
+  .status.err{color:#c62828;}
+  .judgebox{display:flex; gap:10px; align-items:center;}
+  .judgebox input{flex:1;}
+  .qbank{background:#fff9e8; border:1px solid #f0dfa0; border-radius:10px; padding:10px 12px; font-size:12.5px; color:#6b5a12; margin-top:4px;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🏆 Breakthrough Idea Contest — Scoring</h1>
+  <p>Score the oral pitch + 2 Q&A answers only. Takes under a minute per idea.</p>
+</header>
+
+<div class="wrap">
+
+  <div class="card">
+    <label class="field-label">Judge Name (set once)</label>
+    <div class="judgebox">
+      <input type="text" id="judgeName" placeholder="Your name">
+    </div>
+  </div>
+
+  <div class="card">
+    <label class="field-label">Idea / Presenter</label>
+    <input type="text" id="ideaName" placeholder="Team or idea name">
+  </div>
+
+  <div id="criteria"></div>
+
+  <div class="card qbank">
+    💡 <b>Suggested follow-up questions (pick up to 2):</b><br>
+    1. "Can you share one concrete number — time, cost, or effort — that changed because of this?"<br>
+    2. "What's the one thing that would break if you tried to run this for a different client/team?"
+  </div>
+
+</div>
+
+<div class="totalbar">
+  <div class="row">
+    <div class="score" id="totalScore">0.0<span> / 5.0</span></div>
+    <button class="submit-btn" id="submitBtn">Save Score</button>
+  </div>
+  <div class="status" id="statusMsg"></div>
+</div>
+
+<script>
+// ===== CONFIG =====
+// Paste your Apps Script Web App URL here after deployment.
+const SCRIPT_URL = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
+
+const CRITERIA = [
+  {
+    key: "creativity",
+    title: "Creativity & Originality",
+    weight: 20,
+    desc: "Does it uniquely challenge the status quo? Novel solution to a real problem?",
+    anchors: {
+      1: "Known/existing practice, no original angle",
+      2: "Slight variation on existing approach",
+      3: "Genuinely different angle, but similar ideas exist elsewhere",
+      4: "Reframes the problem itself, clearly original",
+      5: "'Why hasn't this been done before' moment"
+    }
+  },
+  {
+    key: "innovation",
+    title: "Innovation",
+    weight: 25,
+    desc: "Industry alignment/trend-setting. Genuine GenAI / Hyper Automation leverage?",
+    anchors: {
+      1: "No real tech leverage, or name-dropped only",
+      2: "Basic/off-the-shelf tool, gain asserted not explained",
+      3: "Clear mechanism explained, gain plausible but not measured",
+      4: "Sophisticated use, mechanism clear, gain roughly quantified",
+      5: "Cutting-edge, measurable outcome, sets a new pattern"
+    }
+  },
+  {
+    key: "replicability",
+    title: "Replicability & Scalability",
+    weight: 10,
+    desc: "Can it be adapted across clients/processes? Can it scale?",
+    anchors: {
+      1: "Deeply specific, can't transfer as-is",
+      2: "Concept could transfer, needs major rework",
+      3: "Some components reusable, others need customization",
+      4: "Built for reuse, next target already named",
+      5: "Explicitly a repeatable pattern, scaling path underway"
+    }
+  },
+  {
+    key: "impact",
+    title: "Impact to Business & Client",
+    weight: 30,
+    desc: "Tangible benefit? Positive change for clients / end-users?",
+    anchors: {
+      1: "Assumed/anecdotal only, no evidence",
+      2: "Vague benefit, unquantified",
+      3: "Partial data, single data point, not validated",
+      4: "Quantified impact, internally validated",
+      5: "Quantified + validated (client feedback / hard metric)"
+    }
+  },
+  {
+    key: "execution",
+    title: "Execution & Implementation",
+    weight: 15,
+    desc: "How well executed? How were challenges overcome?",
+    anchors: {
+      1: "Vague/conceptual, no challenges mentioned",
+      2: "Implemented with visible gaps, challenges glossed over",
+      3: "Solid execution, 1-2 challenges named & resolved",
+      4: "Clear challenge → action → resolution narrative",
+      5: "Exceptional — proactively navigated real obstacles"
+    }
+  }
+];
+
+const scores = {};
+
+function renderCriteria(){
+  const container = document.getElementById('criteria');
+  CRITERIA.forEach(c => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="crit-head">
+        <div class="crit-title">${c.title}</div>
+        <div class="crit-weight">${c.weight}%</div>
+      </div>
+      <div class="crit-desc">${c.desc}</div>
+      <div class="scale" id="scale-${c.key}">
+        ${[1,2,3,4,5].map(n => `<button data-val="${n}" onclick="selectScore('${c.key}',${n})">${n}</button>`).join('')}
+      </div>
+      <div class="anchor-hint" id="hint-${c.key}">Tap a score to see the anchor description</div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function selectScore(key, val){
+  scores[key] = val;
+  document.querySelectorAll(`#scale-${key} button`).forEach(b=>{
+    b.classList.toggle('selected', parseInt(b.dataset.val) === val);
+  });
+  const crit = CRITERIA.find(c=>c.key===key);
+  document.getElementById(`hint-${key}`).textContent = `${val} — ${crit.anchors[val]}`;
+  updateTotal();
+}
+
+function updateTotal(){
+  let total = 0, weightSum = 0;
+  CRITERIA.forEach(c=>{
+    if(scores[c.key]){
+      total += scores[c.key] * (c.weight/100);
+      weightSum += c.weight;
+    }
+  });
+  document.getElementById('totalScore').innerHTML = total.toFixed(2) + '<span> / 5.0</span>';
+}
+
+document.getElementById('submitBtn').addEventListener('click', async () => {
+  const judge = document.getElementById('judgeName').value.trim();
+  const idea = document.getElementById('ideaName').value.trim();
+  const statusEl = document.getElementById('statusMsg');
+
+  if(!judge){ statusEl.textContent = "Enter judge name."; statusEl.className='status err'; return; }
+  if(!idea){ statusEl.textContent = "Enter idea/team name."; statusEl.className='status err'; return; }
+  const missing = CRITERIA.filter(c => !scores[c.key]);
+  if(missing.length){
+    statusEl.textContent = `Score all criteria first (missing: ${missing.map(m=>m.title).join(', ')})`;
+    statusEl.className='status err';
+    return;
+  }
+
+  let weightedTotal = 0;
+  CRITERIA.forEach(c => weightedTotal += scores[c.key] * (c.weight/100));
+
+  const payload = {
+    timestamp: new Date().toISOString(),
+    judge: judge,
+    idea: idea,
+    creativity: scores.creativity,
+    innovation: scores.innovation,
+    replicability: scores.replicability,
+    impact: scores.impact,
+    execution: scores.execution,
+    weightedTotal: Number(weightedTotal.toFixed(3))
+  };
+
+  document.getElementById('submitBtn').disabled = true;
+  statusEl.textContent = "Saving...";
+  statusEl.className = 'status';
+
+  try{
+    await fetch(SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: {'Content-Type':'text/plain'},
+      body: JSON.stringify(payload)
+    });
+    localStorage.setItem('judgeName', judge);
+    statusEl.textContent = `Saved: ${idea} — score ${payload.weightedTotal}/5`;
+    statusEl.className = 'status ok';
+
+    // Reset for next idea, keep judge name
+    document.getElementById('ideaName').value = '';
+    CRITERIA.forEach(c=>{
+      delete scores[c.key];
+      document.querySelectorAll(`#scale-${c.key} button`).forEach(b=>b.classList.remove('selected'));
+      document.getElementById(`hint-${c.key}`).textContent = 'Tap a score to see the anchor description';
+    });
+    updateTotal();
+  }catch(err){
+    statusEl.textContent = "Save failed — check connection and try again.";
+    statusEl.className = 'status err';
+  }
+  document.getElementById('submitBtn').disabled = false;
+});
+
+// restore judge name
+window.addEventListener('load', ()=>{
+  const saved = localStorage.getItem('judgeName');
+  if(saved) document.getElementById('judgeName').value = saved;
+  renderCriteria();
+  updateTotal();
+});
+</script>
+</body>
+</html>
