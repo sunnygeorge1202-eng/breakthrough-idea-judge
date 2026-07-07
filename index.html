@@ -35,13 +35,18 @@
   .crit-title{font-weight:700; font-size:15px;}
   .crit-weight{font-size:12px; color:var(--sub); font-weight:600;}
   .crit-desc{font-size:12.5px; color:var(--sub); margin-bottom:10px; line-height:1.4;}
-  .scale{display:flex; gap:6px;}
-  .scale button{
-    flex:1; padding:10px 2px; border-radius:9px; border:1.5px solid var(--line);
-    background:#fff; font-size:15px; font-weight:700; color:var(--sub); cursor:pointer;
+  .anchor-list{display:flex; flex-direction:column; gap:6px; margin-bottom:2px;}
+  .anchor-row{
+    display:flex; align-items:flex-start; gap:10px; padding:9px 10px; border-radius:9px;
+    border:1.5px solid var(--line); background:#fff; cursor:pointer; text-align:left; width:100%;
   }
-  .scale button.selected{ background:var(--accent); border-color:var(--accent); color:#fff; }
-  .anchor-hint{font-size:11px; color:#8a8aa0; margin-top:6px; min-height:14px;}
+  .anchor-row .num{
+    flex:0 0 26px; height:26px; border-radius:50%; background:#eef0f7; color:var(--sub);
+    font-weight:800; font-size:13px; display:flex; align-items:center; justify-content:center;
+  }
+  .anchor-row .txt{font-size:12.8px; color:var(--ink); line-height:1.35; padding-top:3px;}
+  .anchor-row.selected{ border-color:var(--accent); background:#eef2ff; }
+  .anchor-row.selected .num{ background:var(--accent); color:#fff; }
   .totalbar{
     position:fixed; bottom:0; left:0; right:0; background:#fff; border-top:1px solid var(--line);
     padding:12px 16px; box-shadow:0 -2px 8px rgba(0,0,0,0.08); z-index:20;
@@ -187,10 +192,13 @@ function renderCriteria(){
         <div class="crit-weight">${c.weight}%</div>
       </div>
       <div class="crit-desc">${c.desc}</div>
-      <div class="scale" id="scale-${c.key}">
-        ${[1,2,3,4,5].map(n => `<button data-val="${n}" onclick="selectScore('${c.key}',${n})">${n}</button>`).join('')}
+      <div class="anchor-list" id="scale-${c.key}">
+        ${[1,2,3,4,5].map(n => `
+          <button type="button" class="anchor-row" data-val="${n}" onclick="selectScore('${c.key}',${n})">
+            <span class="num">${n}</span>
+            <span class="txt">${c.anchors[n]}</span>
+          </button>`).join('')}
       </div>
-      <div class="anchor-hint" id="hint-${c.key}">Tap a score to see the anchor description</div>
     `;
     container.appendChild(card);
   });
@@ -198,11 +206,9 @@ function renderCriteria(){
 
 function selectScore(key, val){
   scores[key] = val;
-  document.querySelectorAll(`#scale-${key} button`).forEach(b=>{
+  document.querySelectorAll(`#scale-${key} .anchor-row`).forEach(b=>{
     b.classList.toggle('selected', parseInt(b.dataset.val) === val);
   });
-  const crit = CRITERIA.find(c=>c.key===key);
-  document.getElementById(`hint-${key}`).textContent = `${val} — ${crit.anchors[val]}`;
   updateTotal();
 }
 
@@ -265,8 +271,7 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
     document.getElementById('ideaName').value = '';
     CRITERIA.forEach(c=>{
       delete scores[c.key];
-      document.querySelectorAll(`#scale-${c.key} button`).forEach(b=>b.classList.remove('selected'));
-      document.getElementById(`hint-${c.key}`).textContent = 'Tap a score to see the anchor description';
+      document.querySelectorAll(`#scale-${c.key} .anchor-row`).forEach(b=>b.classList.remove('selected'));
     });
     updateTotal();
   }catch(err){
