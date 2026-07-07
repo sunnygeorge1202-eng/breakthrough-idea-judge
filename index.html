@@ -62,8 +62,6 @@
   .status{font-size:12.5px; margin-top:8px; text-align:center; min-height:16px;}
   .status.ok{color:var(--good);}
   .status.err{color:#c62828;}
-  .judgebox{display:flex; gap:10px; align-items:center;}
-  .judgebox input{flex:1;}
   .qbank{background:#fff9e8; border:1px solid #f0dfa0; border-radius:10px; padding:10px 12px; font-size:12.5px; color:#6b5a12; margin-top:4px;}
 </style>
 </head>
@@ -75,13 +73,6 @@
 </header>
 
 <div class="wrap">
-
-  <div class="card">
-    <label class="field-label">Judge Name (set once)</label>
-    <div class="judgebox">
-      <input type="text" id="judgeName" placeholder="Your name">
-    </div>
-  </div>
 
   <div class="card">
     <label class="field-label">Idea / Presenter</label>
@@ -224,11 +215,9 @@ function updateTotal(){
 }
 
 document.getElementById('submitBtn').addEventListener('click', async () => {
-  const judge = document.getElementById('judgeName').value.trim();
   const idea = document.getElementById('ideaName').value.trim();
   const statusEl = document.getElementById('statusMsg');
 
-  if(!judge){ statusEl.textContent = "Enter judge name."; statusEl.className='status err'; return; }
   if(!idea){ statusEl.textContent = "Enter idea/team name."; statusEl.className='status err'; return; }
   const missing = CRITERIA.filter(c => !scores[c.key]);
   if(missing.length){
@@ -242,7 +231,7 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
 
   const payload = {
     timestamp: new Date().toISOString(),
-    judge: judge,
+    judge: "Judge",
     idea: idea,
     creativity: scores.creativity,
     innovation: scores.innovation,
@@ -263,7 +252,6 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
       headers: {'Content-Type':'text/plain'},
       body: JSON.stringify(payload)
     });
-    localStorage.setItem('judgeName', judge);
     statusEl.textContent = `Saved: ${idea} — score ${payload.weightedTotal}/5`;
     statusEl.className = 'status ok';
 
@@ -281,10 +269,8 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
   document.getElementById('submitBtn').disabled = false;
 });
 
-// restore judge name
+// restore on load
 window.addEventListener('load', ()=>{
-  const saved = localStorage.getItem('judgeName');
-  if(saved) document.getElementById('judgeName').value = saved;
   renderCriteria();
   updateTotal();
 });
